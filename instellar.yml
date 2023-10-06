@@ -1,0 +1,54 @@
+dependencies:
+  build:
+    - nodejs-current
+    - npm
+    - vips-dev
+  runtime:
+    - nodejs-current
+    - npm
+    - bash
+    - curl
+    - s6
+    - jq
+    - ca-certificates
+    - icu-data-full
+    - flicks-openrc
+  trace: true
+
+stack: alpine/3.18
+
+build:
+  command: |
+    npm install
+    npm run build
+  destinations:
+    - .output
+
+run:
+  name: flicks
+  services:
+    - binary: node
+      name: web
+      path: /usr/bin
+      start:
+        call: .output/server/index.mjs
+
+hook:
+  post-deinstall: |
+    rc-service flicks stop
+    rc-update del flicks
+  post-install: |
+    rc-update add flicks
+  post-upgrade: |
+    rc-service flicks start
+  pre-upgrade: |
+    rc-service flicks stop
+
+kits:
+  - description: Web service configuration
+    main: true
+    name: web
+    ports:
+      - main: true
+        name: web
+        target: 3000
